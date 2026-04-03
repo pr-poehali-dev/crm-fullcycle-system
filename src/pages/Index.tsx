@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useYandexAuth } from '@/components/extensions/yandex-auth/useYandexAuth';
 import Sidebar, { type Section } from '@/components/crm/Sidebar';
 import Dashboard from '@/components/crm/Dashboard';
 import Funnel from '@/components/crm/Funnel';
@@ -38,8 +40,26 @@ function renderSection(section: Section) {
   }
 }
 
+const AUTH_URL = 'https://functions.poehali.dev/752120dd-cc58-4568-bef7-e1c3e9d5cff7';
+const apiUrls = {
+  authUrl: `${AUTH_URL}?action=auth-url`,
+  callback: `${AUTH_URL}?action=callback`,
+  refresh: `${AUTH_URL}?action=refresh`,
+  logout: `${AUTH_URL}?action=logout`,
+};
+
 export default function Index() {
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
+  const navigate = useNavigate();
+  const auth = useYandexAuth({ apiUrls });
+
+  if (!auth.isLoading && !auth.isAuthenticated) {
+    navigate('/login', { replace: true });
+    return null;
+  }
+
+  const displayName = auth.user?.name || 'Пользователь';
+  const initials = displayName.trim().split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
 
   const { title, subtitle } = sectionTitles[activeSection];
 
@@ -66,14 +86,24 @@ export default function Index() {
             </button>
             <div className="w-px h-6 bg-border mx-1" />
             <div className="flex items-center gap-2.5 cursor-pointer hover:bg-muted rounded-xl px-2 py-1.5 transition-colors">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center">
-                <span className="text-white text-xs font-bold">АИ</span>
-              </div>
+              {auth.user?.avatar_url ? (
+                <img src={auth.user.avatar_url} className="w-7 h-7 rounded-full object-cover" alt="" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">{initials}</span>
+                </div>
+              )}
               <div className="text-left hidden sm:block">
-                <p className="text-xs font-medium text-foreground leading-tight">Алексей Иванов</p>
-                <p className="text-xs text-muted-foreground">Менеджер</p>
+                <p className="text-xs font-medium text-foreground leading-tight">{displayName}</p>
+                <p className="text-xs text-muted-foreground">{auth.user?.email || 'Менеджер'}</p>
               </div>
-              <Icon name="ChevronDown" size={14} className="text-muted-foreground" />
+              <button
+                onClick={() => auth.logout()}
+                title="Выйти"
+                className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Icon name="LogOut" size={14} />
+              </button>
             </div>
           </div>
         </header>
