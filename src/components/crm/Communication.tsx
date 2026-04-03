@@ -278,11 +278,11 @@ export default function Communication() {
   });
 
   const counts: Record<TabFilter, number> = {
-    Все: allCommunications.length,
-    Письма: allCommunications.filter((c) => c.type === "Письмо").length,
-    Звонки: allCommunications.filter((c) => c.type === "Звонок").length,
-    Встречи: allCommunications.filter((c) => c.type === "Встреча").length,
-    Заметки: allCommunications.filter((c) => c.type === "Заметка").length,
+    Все: sourceComms.length,
+    Письма: sourceComms.filter((c) => c.type === "Письмо").length,
+    Звонки: sourceComms.filter((c) => c.type === "Звонок").length,
+    Встречи: sourceComms.filter((c) => c.type === "Встреча").length,
+    Заметки: sourceComms.filter((c) => c.type === "Заметка").length,
   };
 
   return (

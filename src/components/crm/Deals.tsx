@@ -340,7 +340,7 @@ export default function Deals() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">Сделки</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {filtered.length} из {allDeals.length} сделок
+            {filtered.length} из {sourceDeals.length} сделок
           </p>
         </div>
         <button
