@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "GET clients list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"clients": [], "total": 0},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST create client",
+      "method": "POST",
+      "path": "/",
+      "body": {"name": "Тест Тестов", "company": "ООО Тест", "segment": "Новый", "industry": "IT"},
+      "expectedStatus": 201,
+      "expectedBody": {"message": "Клиент создан"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

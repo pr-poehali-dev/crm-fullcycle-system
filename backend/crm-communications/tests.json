@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "GET communications list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"communications": [], "total": 0},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST create communication",
+      "method": "POST",
+      "path": "/",
+      "body": {"type": "Заметка", "description": "Тестовая заметка", "manager": "Тест Тестов", "client_name": "ООО Тест"},
+      "expectedStatus": 201,
+      "expectedBody": {"message": "Коммуникация добавлена"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET audit log",
+      "method": "GET",
+      "path": "/?endpoint=audit",
+      "expectedStatus": 200,
+      "expectedBody": {"logs": [], "total": 0},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

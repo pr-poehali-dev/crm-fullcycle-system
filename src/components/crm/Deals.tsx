@@ -1,5 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Icon from "@/components/ui/icon";
+import { dealsApi } from "@/lib/api";
+
+const managerPalettes = [
+  "from-blue-100 to-blue-200 text-blue-700",
+  "from-violet-100 to-violet-200 text-violet-700",
+  "from-green-100 to-green-200 text-green-700",
+  "from-amber-100 to-amber-200 text-amber-700",
+  "from-rose-100 to-rose-200 text-rose-700",
+  "from-teal-100 to-teal-200 text-teal-700",
+];
 
 type DealStatus = "Активная" | "Выиграна" | "Проиграна";
 type DealStage = "Новая" | "Квалификация" | "Предложение" | "Переговоры" | "Закрытие";
@@ -232,8 +242,52 @@ export default function Deals() {
   const [sortField, setSortField] = useState<SortField>("amount");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
+  const [dbDeals, setDbDeals] = useState<Deal[] | null>(null);
 
-  const filtered = allDeals
+  const loadDeals = useCallback(async () => {
+    try {
+      const params: Record<string, string> = { per_page: '100' };
+      if (search) params.search = search;
+      if (activeFilter !== 'Все') {
+        const statusMap: Record<string, string> = { Активные: 'Активная', Выиграно: 'Выиграна', Проиграно: 'Проиграна' };
+        if (statusMap[activeFilter]) params.status = statusMap[activeFilter];
+      }
+      const res = await dealsApi.list(params);
+      if (res.deals) {
+        const mapped: Deal[] = res.deals.map((d: Record<string, unknown>, i: number) => {
+          const mgr = (d.manager as string) || '';
+          const parts = mgr.trim().split(' ');
+          const initials = parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : mgr.slice(0, 2).toUpperCase();
+          const cd = d.close_date ? new Date(d.close_date as string) : null;
+          const cr = d.created_at ? new Date(d.created_at as string) : null;
+          return {
+            id: d.id as number,
+            name: d.name as string,
+            client: (d.client_name as string) || '',
+            stage: (d.stage as DealStage) || 'Новая',
+            status: (d.status as DealStatus) || 'Активная',
+            amount: (d.amount as number) || 0,
+            probability: (d.probability as number) || 0,
+            manager: mgr,
+            managerInitials: initials,
+            managerColor: managerPalettes[i % managerPalettes.length],
+            closeDate: cd ? cd.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—',
+            closeDateRaw: d.close_date as string || '',
+            createdDate: cr ? cr.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—',
+          };
+        });
+        setDbDeals(mapped);
+      }
+    } catch {
+      setDbDeals(null);
+    }
+  }, [search, activeFilter]);
+
+  useEffect(() => { loadDeals(); }, [loadDeals]);
+
+  const sourceDeals = dbDeals ?? allDeals;
+
+  const filtered = sourceDeals
     .filter((d) => {
       const matchTab =
         activeFilter === "Все" ||

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Icon from "@/components/ui/icon";
+import { clientsApi } from "@/lib/api";
 
 type Segment = "VIP" | "Активный" | "Потенциальный" | "Новый";
 type Industry = "IT" | "Строительство" | "Медиа" | "Производство" | "Торговля" | "Финансы";
@@ -256,8 +257,47 @@ export default function Clients() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
+  const [dbClients, setDbClients] = useState<Client[] | null>(null);
+  const [dbTotal, setDbTotal] = useState<number>(0);
 
-  const filtered = allClients.filter((c) => {
+  const loadClients = useCallback(async () => {
+    try {
+      const params: Record<string, string> = { per_page: '100' };
+      if (search) params.search = search;
+      if (activeFilter !== 'Все') {
+        const segMap: Record<string, string> = { VIP: 'VIP', Активные: 'Активный', Потенциальные: 'Потенциальный' };
+        if (segMap[activeFilter]) params.segment = segMap[activeFilter];
+      }
+      if (activeIndustry) params.industry = activeIndustry;
+      const res = await clientsApi.list(params);
+      if (res.clients) {
+        const mapped: Client[] = res.clients.map((c: Record<string, unknown>, i: number) => ({
+          id: c.id as number,
+          name: c.name as string,
+          company: c.company as string,
+          phone: (c.phone as string) || '',
+          email: (c.email as string) || '',
+          segment: (c.segment as Segment) || 'Новый',
+          industry: (c.industry as Industry) || 'IT',
+          lastContact: c.last_contact ? new Date(c.last_contact as string).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }) : '—',
+          dealsCount: 0,
+          totalRevenue: (c.total_revenue as number) || 0,
+          avatarColor: avatarPalettes[i % avatarPalettes.length].bg,
+          avatarText: avatarPalettes[i % avatarPalettes.length].text,
+        }));
+        setDbClients(mapped);
+        setDbTotal(res.total as number);
+      }
+    } catch {
+      setDbClients(null);
+    }
+  }, [search, activeFilter, activeIndustry]);
+
+  useEffect(() => { loadClients(); }, [loadClients]);
+
+  const sourceClients = dbClients ?? allClients;
+
+  const filtered = sourceClients.filter((c) => {
     const matchFilter =
       activeFilter === "Все" ||
       (activeFilter === "VIP" && c.segment === "VIP") ||
@@ -303,7 +343,7 @@ export default function Clients() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">Клиенты</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {filtered.length} из {allClients.length} клиентов
+            {filtered.length} из {dbClients ? dbTotal : allClients.length} клиентов
           </p>
         </div>
         <button

@@ -1,5 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Icon from "@/components/ui/icon";
+import { commsApi } from "@/lib/api";
+
+const commPalettes = [
+  { bg: "from-blue-100 to-blue-200", text: "text-blue-700" },
+  { bg: "from-violet-100 to-violet-200", text: "text-violet-700" },
+  { bg: "from-green-100 to-green-200", text: "text-green-700" },
+  { bg: "from-amber-100 to-amber-200", text: "text-amber-700" },
+  { bg: "from-rose-100 to-rose-200", text: "text-rose-700" },
+];
 
 type CommType = "Письмо" | "Звонок" | "Встреча" | "Заметка";
 type TabFilter = "Все" | "Письма" | "Звонки" | "Встречи" | "Заметки";
@@ -208,8 +217,55 @@ export default function Communication() {
   const [activeTab, setActiveTab] = useState<TabFilter>("Все");
   const [managerFilter, setManagerFilter] = useState("Все");
   const [search, setSearch] = useState("");
+  const [dbComms, setDbComms] = useState<Communication[] | null>(null);
+  const [dbManagers, setDbManagers] = useState<string[]>([]);
 
-  const filtered = allCommunications.filter((c) => {
+  const loadComms = useCallback(async () => {
+    try {
+      const params: Record<string, string> = { per_page: '100' };
+      if (search) params.search = search;
+      if (activeTab !== 'Все') params.type = tabToType[activeTab] || '';
+      if (managerFilter !== 'Все') params.manager = managerFilter;
+      const res = await commsApi.list(params);
+      if (res.communications) {
+        const mapped: Communication[] = res.communications.map((c: Record<string, unknown>, i: number) => {
+          const pal = commPalettes[i % commPalettes.length];
+          const mgr = (c.manager as string) || '';
+          const parts = mgr.trim().split(' ');
+          const initials = parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : mgr.slice(0, 2).toUpperCase();
+          const dt = c.comm_datetime ? new Date(c.comm_datetime as string) : new Date();
+          const formatted = dt.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+          return {
+            id: c.id as number,
+            type: c.type as CommType,
+            datetime: formatted,
+            datetimeRaw: c.comm_datetime as string || '',
+            client: (c.client_name as string) || '',
+            manager: mgr,
+            managerInitials: initials,
+            managerGrad: pal.bg,
+            managerText: pal.text,
+            description: c.description as string || '',
+            duration: (c.duration as string) || undefined,
+            callResult: (c.call_result as CallResult) || undefined,
+            subject: (c.subject as string) || undefined,
+            location: (c.location as string) || undefined,
+          };
+        });
+        setDbComms(mapped);
+        if (res.managers) setDbManagers(res.managers as string[]);
+      }
+    } catch {
+      setDbComms(null);
+    }
+  }, [search, activeTab, managerFilter]);
+
+  useEffect(() => { loadComms(); }, [loadComms]);
+
+  const sourceComms = dbComms ?? allCommunications;
+  const sourceManagers = dbManagers.length > 0 ? dbManagers : managers;
+
+  const filtered = sourceComms.filter((c) => {
     const matchTab = activeTab === "Все" || c.type === tabToType[activeTab];
     const matchManager = managerFilter === "Все" || c.manager === managerFilter;
     const q = search.toLowerCase();
@@ -307,7 +363,7 @@ export default function Communication() {
             className="px-3 py-2 rounded-xl border border-border/60 bg-white text-sm text-foreground focus:outline-none focus:ring-2 transition-all cursor-pointer"
           >
             <option value="Все">Все менеджеры</option>
-            {managers.map((m) => (
+            {sourceManagers.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
           </select>

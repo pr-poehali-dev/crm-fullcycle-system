@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "GET deals list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"deals": [], "total": 0},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST create deal",
+      "method": "POST",
+      "path": "/",
+      "body": {"name": "Тестовая сделка", "client_name": "ООО Тест", "stage": "Новая", "amount": 100000},
+      "expectedStatus": 201,
+      "expectedBody": {"message": "Сделка создана"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
