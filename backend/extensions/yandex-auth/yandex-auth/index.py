@@ -283,16 +283,19 @@ def handle_callback(event: dict, origin: str) -> dict:
 
             cleanup_expired_tokens(cur, S)
 
+            role = 'manager'
+
             # 1. Check if user exists by yandex_id
             cur.execute(
-                f"SELECT id, email, name, avatar_url FROM {S}users WHERE yandex_id = %s",
+                f"SELECT id, email, name, avatar_url, role FROM {S}users WHERE yandex_id = %s",
                 (yandex_id,)
             )
             row = cur.fetchone()
 
             if row:
                 # User found by yandex_id - just login
-                user_id, db_email, db_name, db_avatar = row
+                user_id, db_email, db_name, db_avatar, user_role = row
+                role = user_role
                 cur.execute(
                     f"UPDATE {S}users SET last_login_at = %s, updated_at = %s WHERE id = %s",
                     (now, now, user_id)
@@ -304,14 +307,15 @@ def handle_callback(event: dict, origin: str) -> dict:
                 # 2. Check if user exists by email - link Yandex account
                 if email:
                     cur.execute(
-                        f"SELECT id, name, avatar_url FROM {S}users WHERE email = %s",
+                        f"SELECT id, name, avatar_url, role FROM {S}users WHERE email = %s",
                         (email,)
                     )
                     row = cur.fetchone()
 
                 if email and row:
                     # User found by email - link Yandex account
-                    user_id, db_name, db_avatar = row
+                    user_id, db_name, db_avatar, user_role = row
+                    role = user_role
                     cur.execute(
                         f"""UPDATE {S}users
                             SET yandex_id = %s, avatar_url = COALESCE(avatar_url, %s),
@@ -325,10 +329,10 @@ def handle_callback(event: dict, origin: str) -> dict:
                     # 3. Create new user
                     cur.execute(
                         f"""INSERT INTO {S}users
-                            (yandex_id, email, name, avatar_url, email_verified, created_at, updated_at, last_login_at)
-                            VALUES (%s, %s, %s, %s, TRUE, %s, %s, %s)
+                            (yandex_id, email, name, avatar_url, email_verified, role, created_at, updated_at, last_login_at)
+                            VALUES (%s, %s, %s, %s, TRUE, %s, %s, %s, %s)
                             RETURNING id""",
-                        (yandex_id, email, name, picture, now, now, now)
+                        (yandex_id, email, name, picture, 'manager', now, now, now)
                     )
                     user_id = cur.fetchone()[0]
 
@@ -354,7 +358,8 @@ def handle_callback(event: dict, origin: str) -> dict:
                     'email': email,
                     'name': name,
                     'avatar_url': picture,
-                    'yandex_id': yandex_id
+                    'yandex_id': yandex_id,
+                    'role': role
                 }
             }, origin)
 
@@ -402,7 +407,7 @@ def handle_refresh(event: dict, origin: str) -> dict:
         token_hash = hash_token(refresh_token)
 
         cur.execute(
-            f"""SELECT rt.user_id, u.email, u.name, u.avatar_url, u.yandex_id
+            f"""SELECT rt.user_id, u.email, u.name, u.avatar_url, u.yandex_id, u.role
                 FROM {S}refresh_tokens rt
                 JOIN {S}users u ON u.id = rt.user_id
                 WHERE rt.token_hash = %s AND rt.expires_at > %s""",
@@ -414,7 +419,7 @@ def handle_refresh(event: dict, origin: str) -> dict:
             conn.commit()
             return error(401, 'Invalid or expired refresh token', origin)
 
-        user_id, email, name, avatar_url, yandex_id = row
+        user_id, email, name, avatar_url, yandex_id, role = row
 
         access_token, expires_in = create_access_token(user_id, email)
 
@@ -428,7 +433,8 @@ def handle_refresh(event: dict, origin: str) -> dict:
                 'email': email,
                 'name': name,
                 'avatar_url': avatar_url,
-                'yandex_id': yandex_id
+                'yandex_id': yandex_id,
+                'role': role
             }
         }, origin)
 

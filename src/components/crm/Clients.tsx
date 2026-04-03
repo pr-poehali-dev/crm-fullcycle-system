@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Icon from "@/components/ui/icon";
 import { clientsApi } from "@/lib/api";
+import ClientModal from "@/components/crm/ClientModal";
 
 type Segment = "VIP" | "Активный" | "Потенциальный" | "Новый";
 type Industry = "IT" | "Строительство" | "Медиа" | "Производство" | "Торговля" | "Финансы";
@@ -259,6 +260,7 @@ export default function Clients() {
   const [page, setPage] = useState(1);
   const [dbClients, setDbClients] = useState<Client[] | null>(null);
   const [dbTotal, setDbTotal] = useState<number>(0);
+  const [showModal, setShowModal] = useState(false);
 
   const loadClients = useCallback(async () => {
     try {
@@ -347,6 +349,7 @@ export default function Clients() {
           </p>
         </div>
         <button
+          onClick={() => setShowModal(true)}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
           style={{ background: "hsl(var(--crm-blue))" }}
         >
@@ -628,6 +631,12 @@ export default function Clients() {
           </div>
         </div>
       </div>
+
+      <ClientModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onSaved={() => { setShowModal(false); loadClients(); }}
+      />
     </div>
   );
 }

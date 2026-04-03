@@ -18,6 +18,7 @@ export interface User {
   name: string | null;
   avatar_url: string | null;
   yandex_id: string;
+  role: 'admin' | 'manager';
 }
 
 interface AuthApiUrls {
@@ -44,7 +45,7 @@ interface UseYandexAuthReturn {
   handleCallback: (urlParams?: URLSearchParams) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
-  getAuthHeader: () => { Authorization: string } | {};
+  getAuthHeader: () => { Authorization: string } | Record<string, never>;
 }
 
 // =============================================================================

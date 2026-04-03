@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Icon from "@/components/ui/icon";
 import { dealsApi } from "@/lib/api";
+import DealModal from "@/components/crm/DealModal";
 
 const managerPalettes = [
   "from-blue-100 to-blue-200 text-blue-700",
@@ -243,6 +244,7 @@ export default function Deals() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
   const [dbDeals, setDbDeals] = useState<Deal[] | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   const loadDeals = useCallback(async () => {
     try {
@@ -344,6 +346,7 @@ export default function Deals() {
           </p>
         </div>
         <button
+          onClick={() => setShowModal(true)}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
           style={{ background: "hsl(var(--crm-blue))" }}
         >
@@ -571,6 +574,12 @@ export default function Deals() {
           ))
         )}
       </div>
+
+      <DealModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onSaved={() => { setShowModal(false); loadDeals(); }}
+      />
     </div>
   );
 }
